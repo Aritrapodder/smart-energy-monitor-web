@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Energy Monitor — Sign in</title>
+<link rel="stylesheet" href="style.css" />
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body>
+<div class="circuit-bg"></div>
+<div class="page">
+  <div class="login-shell">
+
+    <div class="login-left">
+      <div class="eyebrow">SMART METER CONTROL</div>
+      <h1>Energy Monitor<br /><span>Dashboard</span></h1>
+      <p class="sub">Live voltage, current, power and cost from your meter, relay control, and full history — signed in and synced to your account.</p>
+
+      <div class="auth-panel">
+        <div class="auth-mode-toggle">
+          <button id="tabLogin" class="active" onclick="setMode('login')">Sign in</button>
+          <button id="tabRegister" onclick="setMode('register')">Create account</button>
+        </div>
+
+        <form id="authForm" onsubmit="return submitAuth(event)">
+          <div class="field" id="nameField" style="display:none">
+            <label>Full Name</label>
+            <input type="text" id="name" autocomplete="name" />
+          </div>
+          <div class="field" id="usernameField" style="display:none">
+            <label>Username</label>
+            <input type="text" id="username" autocomplete="username" />
+          </div>
+          <div class="field">
+            <label>Email</label>
+            <input type="email" id="email" autocomplete="email" required />
+          </div>
+          <div class="field">
+            <label>Password</label>
+            <input type="password" id="password" autocomplete="current-password" required />
+          </div>
+          <button type="submit" class="btn-primary" id="submitBtn">Sign in</button>
+        </form>
+
+        <div class="divider">or continue with</div>
+        <div id="googleSignInDiv"></div>
+
+        <div id="formMsg" class="form-msg"></div>
+      </div>
+    </div>
+
+    <div class="login-right">
+      <div class="core-stage">
+        <div class="core-ring"></div>
+        <div class="core-ring r2"></div>
+        <div class="core-ring r3"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="hexcore"></div>
+        <div class="hexcore-inner">LIVE<br />READINGS</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script src="config.js"></script>
+<script src="api.js"></script>
+<script>
+  let mode = "login"; // or "register"
+
+  function setMode(m) {
+    mode = m;
+    document.getElementById("tabLogin").classList.toggle("active", m === "login");
+    document.getElementById("tabRegister").classList.toggle("active", m === "register");
+    document.getElementById("nameField").style.display = m === "register" ? "block" : "none";
+    document.getElementById("usernameField").style.display = m === "register" ? "block" : "none";
+    document.getElementById("submitBtn").textContent = m === "register" ? "Create account" : "Sign in";
+    document.getElementById("formMsg").textContent = "";
+  }
+
+  function showMsg(text, isError) {
+    const el = document.getElementById("formMsg");
+    el.textContent = text;
+    el.className = "form-msg " + (isError ? "error" : "ok");
+  }
+
+  async function submitAuth(e) {
+    e.preventDefault();
+    const email = document.getElementById("email").value.trim();
+    const password = document.getElementById("password").value;
+    const name = document.getElementById("name").value.trim();
+    const username = document.getElementById("username").value.trim();
+    const btn = document.getElementById("submitBtn");
+    btn.disabled = true;
+    showMsg("Connecting…", false);
+    try {
+      let res;
+      if (mode === "register") {
+        res = await Api.register({ fullName: name, username, email, password });
+      } else {
+        res = await Api.login(email, password);
+      }
+      // NOTE: assumes LoginResponse has a "token" field — adjust the key
+      // below if your LoginResponse.java calls it something else.
+      if (res.token) localStorage.setItem("authToken", res.token);
+      showMsg("Signed in — loading dashboard…", false);
+      window.location.href = "dashboard.html";
+    } catch (err) {
+      showMsg(err.message || "Something went wrong", true);
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  async function handleGoogleCredential(response) {
+    showMsg("Verifying with Google…", false);
+    try {
+      const res = await Api.googleLogin(response.credential);
+      if (res.token) localStorage.setItem("authToken", res.token);
+      window.location.href = "dashboard.html";
+    } catch (err) {
+      showMsg(err.message || "Google sign-in failed", true);
+    }
+  }
+
+  window.onload = () => {
+    if (window.google && CONFIG.GOOGLE_CLIENT_ID && !CONFIG.GOOGLE_CLIENT_ID.startsWith("YOUR_")) {
+      google.accounts.id.initialize({
+        client_id: CONFIG.GOOGLE_CLIENT_ID,
+        callback: handleGoogleCredential,
+      });
+      google.accounts.id.renderButton(document.getElementById("googleSignInDiv"), {
+        theme: "filled_black",
+        size: "large",
+        shape: "pill",
+        width: 300,
+      });
+    } else {
+      document.getElementById("googleSignInDiv").innerHTML =
+        '<div style="color:#8494a3;font-family:JetBrains Mono,monospace;font-size:12px;text-align:center;">Add your Google Web Client ID in config.js to enable this button</div>';
+    }
+  };
+</script>
+</body>
+</html>

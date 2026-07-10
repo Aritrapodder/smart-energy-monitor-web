@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Energy Monitor — Dashboard</title>
+<link rel="stylesheet" href="style.css" />
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+</head>
+<body>
+<div class="circuit-bg"></div>
+<div class="page">
+
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-mark"><div class="hexcore"></div></div>
+      Energy Monitor
+    </div>
+    <div class="topbar-right">
+      <div class="device-chip">DEVICE <b id="deviceLabel">—</b></div>
+      <button class="btn-ghost" onclick="logout()">Logout</button>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active">Dashboard</div>
+    <div class="tab" onclick="location.href='rawlog.html'">Raw Log</div>
+    <div class="tab" onclick="location.href='daily.html'">Daily Summary</div>
+    <div class="tab" onclick="location.href='monthly.html'">Monthly Report</div>
+  </div>
+
+  <div class="container">
+
+    <div class="section-title">Live readings</div>
+    <div class="meter-grid" id="meterGrid">
+      <div class="loading-row">Fetching latest reading…</div>
+    </div>
+
+    <div class="section-title">Relay status (view only — control from app)</div>
+    <div class="relay-grid" id="relayGrid">
+      <div class="loading-row">Fetching relay status…</div>
+    </div>
+
+    <div class="section-title">Trends</div>
+    <div class="chart-panel"><canvas id="voltageChart"></canvas></div>
+    <div class="chart-panel"><canvas id="powerChart"></canvas></div>
+    <div class="chart-panel"><canvas id="energyChart"></canvas></div>
+
+    <div class="section-title">Debug — raw data from backend (temporary)</div>
+    <div class="table-panel" style="padding:16px;">
+      <pre id="debugBox" style="white-space:pre-wrap;color:#8494a3;font-family:JetBrains Mono,monospace;font-size:12px;margin:0;">Loading…</pre>
+    </div>
+
+    <div class="section-title">Debug — raw relay data (temporary)</div>
+    <div class="table-panel" style="padding:16px;">
+      <pre id="relayDebugBox" style="white-space:pre-wrap;color:#8494a3;font-family:JetBrains Mono,monospace;font-size:12px;margin:0;">Loading…</pre>
+    </div>
+
+  </div>
+</div>
+
+<script src="config.js"></script>
+<script src="api.js"></script>
+<script src="tilt.js"></script>
+<script>
+  requireAuth();
+  document.getElementById("deviceLabel").textContent = CONFIG.DEVICE_ID;
+
+  function meterCard(cls, label, value, unit) {
+    return `<div class="meter-card ${cls}">
+      <div class="label">${label}</div>
+      <div class="value">${value}<span class="unit">${unit}</span></div>
+    </div>`;
+  }
+
+  async function loadLatest() {
+    try {
+      const raw = await Api.getLatestReading(CONFIG.DEVICE_ID);
+      document.getElementById("debugBox").textContent = JSON.stringify(raw, null, 2);
+      const r = raw.reading || raw;
+      if (!r) {
+        document.getElementById("meterGrid").innerHTML =
+          `<div class="empty-state">No reading found for device "${CONFIG.DEVICE_ID}". Check DEVICE_ID in config.js matches what your meter actually sends.</div>`;
+        return;
+      }
+      document.getElementById("meterGrid").innerHTML =
+        meterCard("", "Voltage", r.voltage ?? "—", "V") +
+        meterCard("", "Current", r.current ?? "—", "A") +
+        meterCard("", "Power", r.power ?? "—", "W") +
+        meterCard("", "Energy", r.energy ?? "—", "kWh") +
+        meterCard("", "Frequency", r.frequency ?? "—", "Hz") +
+        meterCard("", "Power Factor", r.powerFactor ?? "—", "") +
+        meterCard("cost amber", "Cost", r.cost ?? "—", "₹");
+      enableTilt(".meter-card");
+    } catch (err) {
+      document.getElementById("debugBox").textContent = "ERROR: " + err.message;
+      document.getElementById("meterGrid").innerHTML =
+        `<div class="empty-state">Couldn't load live readings.<br>${err.message}</div>`;
+    }
+  }
+
+  async function loadRelays() {
+    try {
+      const r = await Api.getRelayStatus(CONFIG.DEVICE_ID);
+      document.getElementById("relayDebugBox").textContent = JSON.stringify(r, null, 2);
+      const relayData = r.relay || {};
+      const relays = [
+        { number: "1", name: "Power Source 1", on: !!relayData.relay1 },
+        { number: "2", name: "Power Source 2", on: !!relayData.relay2 },
+      ];
+      document.getElementById("relayGrid").innerHTML = relays
+        .map(
+          (rel) => `<div class="relay-card">
+            <div>
+              <div class="name">Relay ${rel.number}</div>
+              <div class="sub">${rel.name || ""}</div>
+            </div>
+            <div class="switch read-only ${rel.on ? "on" : ""}" title="Control from the app">
+              <div class="knob"></div>
+            </div>
+          </div>`
+        )
+        .join("");
+    } catch (err) {
+      document.getElementById("relayGrid").innerHTML =
+        `<div class="empty-state">Couldn't load relay status.<br>${err.message}</div>`;
+    }
+  }
+
+  function lineChart(ctx, label, color, points) {
+    return new Chart(ctx, {
+      type: "line",
+      data: {
+        labels: points.map((_, i) => i),
+        datasets: [{
+          label, data: points, borderColor: color, backgroundColor: color + "22",
+          pointRadius: 3, pointBackgroundColor: color, tension: 0.35, fill: true,
+        }],
+      },
+      options: {
+        plugins: { legend: { display: false }, title: { display: true, text: label, color: "#e9eef2" } },
+        scales: {
+          x: { ticks: { color: "#8494a3" }, grid: { color: "#1f2a35" } },
+          y: { ticks: { color: "#8494a3" }, grid: { color: "#1f2a35" } },
+        },
+      },
+    });
+  }
+
+  async function loadTrends() {
+    try {
+      const h = await Api.getHistory(CONFIG.DEVICE_ID, 15);
+      const readings = (h.readings || []).slice().reverse();
+      lineChart(document.getElementById("voltageChart"), "Voltage (V)", "#4ce0d2", readings.map(r => r.voltage));
+      lineChart(document.getElementById("powerChart"), "Power (W)", "#ff6b57", readings.map(r => r.power));
+      lineChart(document.getElementById("energyChart"), "Energy (kWh)", "#ffb020", readings.map(r => r.energy));
+    } catch (err) {
+      document.querySelectorAll(".chart-panel").forEach(p => p.innerHTML = `<div class="empty-state">Couldn't load trend data.<br>${err.message}</div>`);
+    }
+  }
+
+  loadLatest();
+  loadRelays();
+  loadTrends();
+  setInterval(loadLatest, 15000);
+  setInterval(loadRelays, 15000);
+</script>
+</body>
+</html>

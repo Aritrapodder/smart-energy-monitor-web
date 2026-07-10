@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Energy Monitor — Daily Summary</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<div class="circuit-bg"></div>
+<div class="page">
+  <div class="topbar">
+    <div class="brand"><div class="brand-mark"><div class="hexcore"></div></div>Energy Monitor</div>
+    <div class="topbar-right">
+      <div class="device-chip">DEVICE <b id="deviceLabel">—</b></div>
+      <button class="btn-ghost" onclick="logout()">Logout</button>
+    </div>
+  </div>
+  <div class="tabs">
+    <div class="tab" onclick="location.href='dashboard.html'">Dashboard</div>
+    <div class="tab" onclick="location.href='rawlog.html'">Raw Log</div>
+    <div class="tab active">Daily Summary</div>
+    <div class="tab" onclick="location.href='monthly.html'">Monthly Report</div>
+  </div>
+  <div class="container">
+    <div class="section-title">Daily summary (from Google Sheet)</div>
+    <div class="table-panel table-scroll">
+      <table>
+        <thead id="head"></thead>
+        <tbody id="rows"><tr><td class="loading-row">Loading…</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+<script src="config.js"></script>
+<script src="api.js"></script>
+<script src="csv.js"></script>
+<script>
+  requireAuth();
+  document.getElementById("deviceLabel").textContent = CONFIG.DEVICE_ID;
+
+  async function load() {
+    const url = CONFIG.DAILY_SHEET_CSV_URL;
+    if (!url || url.startsWith("PASTE_")) {
+      document.getElementById("rows").innerHTML =
+        `<tr><td class="empty-state">Add DAILY_SHEET_CSV_URL in config.js (Google Sheet published as CSV) to show this table.</td></tr>`;
+      return;
+    }
+    try {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      const text = await res.text();
+      const rows = parseCSV(text);
+      if (!rows.length) {
+        document.getElementById("rows").innerHTML = `<tr><td class="empty-state">Sheet is empty</td></tr>`;
+        return;
+      }
+      const [header, ...body] = rows;
+      document.getElementById("head").innerHTML =
+        "<tr>" + header.map(h => `<th>${h}</th>`).join("") + "</tr>";
+      document.getElementById("rows").innerHTML = body
+        .filter(r => r.some(c => c !== ""))
+        .map(r => "<tr>" + r.map(c => `<td>${c}</td>`).join("") + "</tr>")
+        .join("");
+    } catch (err) {
+      document.getElementById("rows").innerHTML =
+        `<tr><td class="empty-state">Couldn't load the Sheet.<br>${err.message}<br>Make sure it's published (File → Share → Publish to web) and the link in config.js is the CSV link for this tab.</td></tr>`;
+    }
+  }
+  load();
+</script>
+</body>
+</html>

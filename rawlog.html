@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Energy Monitor — Raw Log</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<div class="circuit-bg"></div>
+<div class="page">
+  <div class="topbar">
+    <div class="brand"><div class="brand-mark"><div class="hexcore"></div></div>Energy Monitor</div>
+    <div class="topbar-right">
+      <div class="device-chip">DEVICE <b id="deviceLabel">—</b></div>
+      <button class="btn-ghost" onclick="logout()">Logout</button>
+    </div>
+  </div>
+  <div class="tabs">
+    <div class="tab" onclick="location.href='dashboard.html'">Dashboard</div>
+    <div class="tab active">Raw Log</div>
+    <div class="tab" onclick="location.href='daily.html'">Daily Summary</div>
+    <div class="tab" onclick="location.href='monthly.html'">Monthly Report</div>
+  </div>
+  <div class="container">
+    <div class="section-title">Raw log (from Google Sheet)</div>
+    <div class="table-panel table-scroll">
+      <table>
+        <thead id="tableHead"><tr><th>Loading…</th></tr></thead>
+        <tbody id="rows"><tr><td class="loading-row">Loading…</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+<script src="config.js"></script>
+<script src="api.js"></script>
+<script>
+  requireAuth();
+  document.getElementById("deviceLabel").textContent = CONFIG.DEVICE_ID;
+
+  function parseCSV(text) {
+    const rows = [];
+    let row = [], field = "", inQuotes = false;
+    for (let i = 0; i < text.length; i++) {
+      const c = text[i];
+      if (inQuotes) {
+        if (c === '"' && text[i + 1] === '"') { field += '"'; i++; }
+        else if (c === '"') { inQuotes = false; }
+        else { field += c; }
+      } else {
+        if (c === '"') inQuotes = true;
+        else if (c === ',') { row.push(field); field = ""; }
+        else if (c === '\n' || c === '\r') {
+          if (field !== "" || row.length) { row.push(field); rows.push(row); row = []; field = ""; }
+          if (c === '\r' && text[i + 1] === '\n') i++;
+        } else field += c;
+      }
+    }
+    if (field !== "" || row.length) { row.push(field); rows.push(row); }
+    return rows.filter(r => r.length && r.some(c => c.trim() !== ""));
+  }
+
+  async function load() {
+    try {
+      const res = await fetch(CONFIG.RAWLOG_SHEET_CSV_URL + "&t=" + Date.now());
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      const text = await res.text();
+      const rows = parseCSV(text);
+      if (!rows.length) {
+        document.getElementById("rows").innerHTML = `<tr><td class="empty-state">No data yet</td></tr>`;
+        return;
+      }
+      const header = rows[0];
+      const dataRows = rows.slice(1).reverse();
+
+      document.getElementById("tableHead").innerHTML =
+        "<tr>" + header.map(h => `<th>${h}</th>`).join("") + "</tr>";
+
+      document.getElementById("rows").innerHTML = dataRows
+        .map(r => "<tr>" + header.map((_, i) => `<td>${r[i] ?? ""}</td>`).join("") + "</tr>")
+        .join("");
+    } catch (err) {
+      document.getElementById("rows").innerHTML =
+        `<tr><td class="empty-state">Couldn't load Raw Log.<br>${err.message}</td></tr>`;
+    }
+  }
+
+  load();
+  setInterval(load, 5000);
+</script>
+</body>
+</html>
