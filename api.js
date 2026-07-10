@@ -107,7 +107,86 @@ function requireAuth() {
   }
 }
 
+function getDeviceId() {
+  return localStorage.getItem("deviceId") || "";
+}
+
+function setDeviceId(id) {
+  localStorage.setItem("deviceId", id.trim());
+}
+
+// Call on every page that needs a device selected (all pages except index.html and device-setup.html)
+function requireDevice() {
+  if (!getDeviceId()) {
+    window.location.href = "device-setup.html";
+  }
+}
+
+function changeDevice() {
+  const current = getDeviceId();
+  const next = prompt("Enter your Device ID (the same one your meter/ESP32 sends):", current);
+  if (next && next.trim()) {
+    setDeviceId(next);
+    location.reload();
+  }
+}
+
 function logout() {
   localStorage.removeItem("authToken");
   window.location.href = "index.html";
+}
+
+// Shows a one-time "Enter your Device ID" screen if the customer hasn't set one
+// yet, then runs onReady() once it's known. After that, CONFIG.DEVICE_ID is
+// set to the saved value for the rest of the page.
+function requireDeviceId(onReady) {
+  const stored = localStorage.getItem("deviceId");
+  if (stored) {
+    CONFIG.DEVICE_ID = stored;
+    onReady();
+    return;
+  }
+
+  const overlay = document.createElement("div");
+  overlay.id = "deviceGateOverlay";
+  overlay.style.cssText =
+    "position:fixed;inset:0;background:rgba(10,14,18,0.94);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;";
+  overlay.innerHTML = `
+    <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:32px;max-width:380px;width:100%;text-align:center;">
+      <div class="eyebrow" style="justify-content:center;margin-bottom:14px;">SETUP</div>
+      <h3 style="margin-bottom:10px;font-family:var(--font-display);color:var(--text);">Enter your Device ID</h3>
+      <p style="color:var(--text-muted);font-size:13px;margin-bottom:18px;line-height:1.5;">
+        This is the ID your smart meter reports as. You'll find it on the meter's label, or ask whoever installed it.
+      </p>
+      <input id="deviceIdInput" type="text" placeholder="e.g. ESP8266_001"
+        style="width:100%;box-sizing:border-box;padding:11px 12px;border-radius:8px;border:1px solid var(--border);
+        background:var(--bg-raised);color:var(--text);font-family:var(--font-mono);font-size:14px;margin-bottom:14px;outline:none;" />
+      <button id="deviceIdSubmit" class="btn-primary">Continue</button>
+      <div id="deviceIdMsg" style="color:var(--coral);font-family:var(--font-mono);font-size:12px;margin-top:10px;min-height:16px;"></div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  const input = document.getElementById("deviceIdInput");
+  const submit = () => {
+    const val = input.value.trim();
+    if (!val) {
+      document.getElementById("deviceIdMsg").textContent = "Please enter a device ID.";
+      return;
+    }
+    localStorage.setItem("deviceId", val);
+    CONFIG.DEVICE_ID = val;
+    overlay.remove();
+    onReady();
+  };
+  document.getElementById("deviceIdSubmit").onclick = submit;
+  input.addEventListener("keydown", (e) => { if (e.key === "Enter") submit(); });
+  input.focus();
+}
+
+// Lets the customer change their saved device ID later (e.g. clicking the
+// DEVICE chip in the top bar).
+function changeDeviceId() {
+  localStorage.removeItem("deviceId");
+  location.reload();
 }

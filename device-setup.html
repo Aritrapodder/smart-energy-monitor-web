@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Energy Monitor — Set up your device</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<div class="circuit-bg"></div>
+<div class="page" style="align-items:center;justify-content:center;">
+  <div class="auth-panel" style="max-width:420px;">
+    <div class="eyebrow" style="margin-bottom:14px;">ONE-TIME SETUP</div>
+    <h2 style="margin-bottom:8px;">Connect your meter</h2>
+    <p style="color:var(--text-muted);font-size:14px;line-height:1.6;margin-bottom:20px;">
+      Enter your Device ID — the same one your smart meter (ESP32) sends with every reading.
+      You'll only need to do this once; you can change it later from the dashboard.
+    </p>
+    <div class="field">
+      <label>Device ID</label>
+      <input type="text" id="deviceIdInput" placeholder="e.g. ESP8266_001" autocomplete="off" />
+    </div>
+    <button class="btn-primary" onclick="save()">Continue</button>
+    <div id="msg" class="form-msg"></div>
+  </div>
+</div>
+<script src="config.js"></script>
+<script src="api.js"></script>
+<script>
+  requireAuth();
+
+  function save() {
+    const val = document.getElementById("deviceIdInput").value.trim();
+    if (!val) {
+      document.getElementById("msg").textContent = "Please enter a Device ID.";
+      document.getElementById("msg").className = "form-msg error";
+      return;
+    }
+    setDeviceId(val);
+    window.location.href = "dashboard.html";
+  }
+
+  document.getElementById("deviceIdInput").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") save();
+  });
+</script>
+</body>
+</html>

@@ -51,7 +51,6 @@ body {
 a { color: inherit; text-decoration: none; }
 button { font-family: inherit; }
 
-/* ---------- circuit-trace background texture ---------- */
 .circuit-bg {
   position: fixed;
   inset: 0;
@@ -65,7 +64,6 @@ button { font-family: inherit; }
   mask-image: radial-gradient(circle at 50% 0%, black, transparent 75%);
 }
 
-/* ---------- layout shells ---------- */
 .page {
   position: relative;
   z-index: 1;
@@ -100,9 +98,6 @@ h1, h2, h3 {
   letter-spacing: -0.01em;
 }
 
-/* ============================================================
-   TOP NAV (dashboard pages)
-   ============================================================ */
 .topbar {
   display: flex;
   align-items: center;
@@ -184,9 +179,6 @@ h1, h2, h3 {
   width: 100%;
 }
 
-/* ============================================================
-   METER CARDS (3D tilt)
-   ============================================================ */
 .meter-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
@@ -242,7 +234,6 @@ h1, h2, h3 {
 .meter-card.amber .value .unit { color: var(--amber); }
 .meter-card.cost .value { color: var(--amber); }
 
-/* ---------- relay switches ---------- */
 .relay-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
@@ -288,7 +279,6 @@ h1, h2, h3 {
 .switch.on { background: rgba(76,224,210,0.15); border-color: var(--cyan); }
 .switch.on .knob { transform: translateX(20px); background: var(--cyan); box-shadow: 0 0 10px var(--cyan); }
 
-/* ---------- section headers ---------- */
 .section-title {
   font-family: var(--font-mono);
   font-size: 12px;
@@ -307,7 +297,6 @@ h1, h2, h3 {
   display: inline-block;
 }
 
-/* ---------- charts ---------- */
 .chart-panel {
   background: var(--panel);
   border: 1px solid var(--border);
@@ -317,7 +306,6 @@ h1, h2, h3 {
 }
 .chart-panel canvas { max-height: 220px; }
 
-/* ---------- tables ---------- */
 .table-panel {
   background: var(--panel);
   border: 1px solid var(--border);
@@ -354,9 +342,6 @@ tbody tr:last-child td { border-bottom: none; }
   font-size: 13px;
 }
 
-/* ============================================================
-   LOGIN PAGE
-   ============================================================ */
 .login-shell {
   flex: 1;
   display: grid;
@@ -483,7 +468,6 @@ tbody tr:last-child td { border-bottom: none; }
 .form-msg.error { color: var(--coral); }
 .form-msg.ok { color: var(--cyan); }
 
-/* ---------- login right: energy core ---------- */
 .login-right {
   position: relative;
   display: flex;
@@ -563,10 +547,8 @@ tbody tr:last-child td { border-bottom: none; }
 
 .brand-mark .hexcore { position: static; margin: 0; width: 30px; height: 30px; animation-duration: 3s, 8s; box-shadow: none; }
 
-/* reduced motion */
 @media (prefers-reduced-motion: reduce) {
   .core-ring, .hexcore, .particle, .eyebrow::before { animation: none !important; }
 }
 
-/* small helpers */
 .loading-row { color: var(--text-faint); font-family: var(--font-mono); font-size: 12px; padding: 20px; text-align: center; }

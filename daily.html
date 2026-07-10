@@ -12,7 +12,7 @@
   <div class="topbar">
     <div class="brand"><div class="brand-mark"><div class="hexcore"></div></div>Energy Monitor</div>
     <div class="topbar-right">
-      <div class="device-chip">DEVICE <b id="deviceLabel">—</b></div>
+      <div class="device-chip" onclick="changeDevice()" style="cursor:pointer;" title="Click to change device">DEVICE <b id="deviceLabel">—</b></div>
       <button class="btn-ghost" onclick="logout()">Logout</button>
     </div>
   </div>
@@ -37,7 +37,8 @@
 <script src="csv.js"></script>
 <script>
   requireAuth();
-  document.getElementById("deviceLabel").textContent = CONFIG.DEVICE_ID;
+  requireDevice();
+  document.getElementById("deviceLabel").textContent = getDeviceId();
 
   async function load() {
     const url = CONFIG.DAILY_SHEET_CSV_URL;

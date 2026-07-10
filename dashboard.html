@@ -17,7 +17,7 @@
       Energy Monitor
     </div>
     <div class="topbar-right">
-      <div class="device-chip">DEVICE <b id="deviceLabel">—</b></div>
+      <div class="device-chip" onclick="changeDevice()" style="cursor:pointer;" title="Click to change device">DEVICE <b id="deviceLabel">—</b></div>
       <button class="btn-ghost" onclick="logout()">Logout</button>
     </div>
   </div>
@@ -54,7 +54,8 @@
 <script src="tilt.js"></script>
 <script>
   requireAuth();
-  document.getElementById("deviceLabel").textContent = CONFIG.DEVICE_ID;
+  requireDevice();
+  document.getElementById("deviceLabel").textContent = getDeviceId();
 
   function meterCard(cls, label, value, unit) {
     return `<div class="meter-card ${cls}">
@@ -65,11 +66,11 @@
 
   async function loadLatest() {
     try {
-      const raw = await Api.getLatestReading(CONFIG.DEVICE_ID);
+      const raw = await Api.getLatestReading(getDeviceId());
       const r = raw.reading || raw; // backend wraps the reading inside { success, reading: {...} }
       if (!r) {
         document.getElementById("meterGrid").innerHTML =
-          `<div class="empty-state">No reading found for device "${CONFIG.DEVICE_ID}". Check DEVICE_ID in config.js matches what your meter actually sends.</div>`;
+          `<div class="empty-state">No reading found for device "${getDeviceId()}". Click the device chip above to check/change it.</div>`;
         return;
       }
       document.getElementById("meterGrid").innerHTML =
@@ -89,7 +90,7 @@
 
   async function loadRelays() {
     try {
-      const raw = await Api.getRelayStatus(CONFIG.DEVICE_ID);
+      const raw = await Api.getRelayStatus(getDeviceId());
       const relayData = raw.relay || raw; // backend wraps relay status inside { success, relay: {...} }
       const relays = [
         { number: "1", name: "Power Source 1", on: !!relayData.relay1 },
@@ -136,7 +137,7 @@
 
   async function loadTrends() {
     try {
-      const h = await Api.getHistory(CONFIG.DEVICE_ID, 15);
+      const h = await Api.getHistory(getDeviceId(), 15);
       const readings = (h.readings || []).slice().reverse();
       lineChart(document.getElementById("voltageChart"), "Voltage (V)", "#4ce0d2", readings.map(r => r.voltage));
       lineChart(document.getElementById("powerChart"), "Power (W)", "#ff6b57", readings.map(r => r.power));

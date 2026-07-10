@@ -107,7 +107,7 @@
       // below if your LoginResponse.java calls it something else.
       if (res.token) localStorage.setItem("authToken", res.token);
       showMsg("Signed in — loading dashboard…", false);
-      window.location.href = "dashboard.html";
+      window.location.href = getDeviceId() ? "dashboard.html" : "device-setup.html";
     } catch (err) {
       showMsg(err.message || "Something went wrong", true);
     } finally {
@@ -120,7 +120,7 @@
     try {
       const res = await Api.googleLogin(response.credential);
       if (res.token) localStorage.setItem("authToken", res.token);
-      window.location.href = "dashboard.html";
+      window.location.href = getDeviceId() ? "dashboard.html" : "device-setup.html";
     } catch (err) {
       showMsg(err.message || "Google sign-in failed", true);
     }
