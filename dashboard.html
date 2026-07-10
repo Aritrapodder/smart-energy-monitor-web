@@ -46,16 +46,6 @@
     <div class="chart-panel"><canvas id="powerChart"></canvas></div>
     <div class="chart-panel"><canvas id="energyChart"></canvas></div>
 
-    <div class="section-title">Debug — raw data from backend (temporary)</div>
-    <div class="table-panel" style="padding:16px;">
-      <pre id="debugBox" style="white-space:pre-wrap;color:#8494a3;font-family:JetBrains Mono,monospace;font-size:12px;margin:0;">Loading…</pre>
-    </div>
-
-    <div class="section-title">Debug — raw relay data (temporary)</div>
-    <div class="table-panel" style="padding:16px;">
-      <pre id="relayDebugBox" style="white-space:pre-wrap;color:#8494a3;font-family:JetBrains Mono,monospace;font-size:12px;margin:0;">Loading…</pre>
-    </div>
-
   </div>
 </div>
 
@@ -76,8 +66,7 @@
   async function loadLatest() {
     try {
       const raw = await Api.getLatestReading(CONFIG.DEVICE_ID);
-      document.getElementById("debugBox").textContent = JSON.stringify(raw, null, 2);
-      const r = raw.reading || raw;
+      const r = raw.reading || raw; // backend wraps the reading inside { success, reading: {...} }
       if (!r) {
         document.getElementById("meterGrid").innerHTML =
           `<div class="empty-state">No reading found for device "${CONFIG.DEVICE_ID}". Check DEVICE_ID in config.js matches what your meter actually sends.</div>`;
@@ -93,7 +82,6 @@
         meterCard("cost amber", "Cost", r.cost ?? "—", "₹");
       enableTilt(".meter-card");
     } catch (err) {
-      document.getElementById("debugBox").textContent = "ERROR: " + err.message;
       document.getElementById("meterGrid").innerHTML =
         `<div class="empty-state">Couldn't load live readings.<br>${err.message}</div>`;
     }
@@ -101,9 +89,8 @@
 
   async function loadRelays() {
     try {
-      const r = await Api.getRelayStatus(CONFIG.DEVICE_ID);
-      document.getElementById("relayDebugBox").textContent = JSON.stringify(r, null, 2);
-      const relayData = r.relay || {};
+      const raw = await Api.getRelayStatus(CONFIG.DEVICE_ID);
+      const relayData = raw.relay || raw; // backend wraps relay status inside { success, relay: {...} }
       const relays = [
         { number: "1", name: "Power Source 1", on: !!relayData.relay1 },
         { number: "2", name: "Power Source 2", on: !!relayData.relay2 },
@@ -115,7 +102,7 @@
               <div class="name">Relay ${rel.number}</div>
               <div class="sub">${rel.name || ""}</div>
             </div>
-            <div class="switch read-only ${rel.on ? "on" : ""}" title="Control from the app">
+            <div class="switch ${rel.on ? "on" : ""}" style="pointer-events:none;" title="Controlled from the app only">
               <div class="knob"></div>
             </div>
           </div>`
